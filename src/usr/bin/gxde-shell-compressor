@@ -21,7 +21,18 @@ check_tools() {
     fi
 }
 
+function ask_if_overwrite(){
+if [[ -e "$1" ]];then
+    if garma --question --text="$1 已被占用，是否覆盖？\n$1 is occulied. Overwrite?"
+        continue
+    else
+    exit 1
+    fi
+fi
+}
+
 function create_tar(){
+            ask_if_overwrite "$FILE.tar"
             tar -cvf "$FILE.tar" --files-from=/dev/null
             for FILE_TO_ADD in "$@";do
             pushd "$(dirname ${FILE_TO_ADD})"
@@ -65,16 +76,20 @@ compress_files() {
         "7z")
 
             if [ -n "$PASSWORD" ]; then
+                ask_if_overwrite "$FILE.7z"
                 7z a -t7z "$FILE.7z" "$@" -p"$PASSWORD" 
             else
+                ask_if_overwrite "$FILE.7z"
                 7z a -t7z "$FILE.7z" "$@"
             fi 
 
             ;;
         "zip")
             if [ -n "$PASSWORD" ]; then
+                ask_if_overwrite "$FILE.zip"
                 7z a -tzip "$FILE.zip" "$@" -p"$PASSWORD" 
             else
+                ask_if_overwrite "$FILE.zip"
                 7z a -tzip "$FILE.zip" "$@"
             fi 
         ;;
@@ -106,7 +121,8 @@ compress_files() {
 extract_single_file() {
     local FILE="$1"
     local EXTRACT_DIR="$2"
-    
+
+
     while true; do
         case "$FILE" in
             *.7z)
@@ -185,8 +201,11 @@ extract_files() {
     [ -z "$EXTRACT_DIR" ] && echo "取消解压操作" && exit 1
 
     (for FILE in "$@"; do
-        extract_single_file "$FILE" "$EXTRACT_DIR"
-    done) | garma --progress --pulsate --auto-close --no-cancel --text="正在执行操作 Processing..."
+        local TARGET_DIR="$EXTRACT_DIR/$(basename "$FILE" | cut -d. -f1)"
+        ask_if_overwrite "$TARGET_DIR"
+        mkdir -p "$TARGET_DIR"
+        extract_single_file "$FILE" "$TARGET_DIR"
+    done)
     garma --info --text="解压完成！Finished"
 }
 
@@ -196,6 +215,7 @@ extract_here() {
         local EXTRACT_DIR
         EXTRACT_DIR=$(dirname "$FILE")
         local TARGET_DIR="$EXTRACT_DIR/$(basename "$FILE" | cut -d. -f1)"
+        ask_if_overwrite "$TARGET_DIR"
         mkdir -p "$TARGET_DIR"
         extract_single_file "$FILE" "$TARGET_DIR"
     done) | garma --progress --pulsate --auto-close --no-cancel --text="正在执行操作 Processing..."
