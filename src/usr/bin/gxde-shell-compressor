@@ -185,6 +185,7 @@ extract_single_file() {
             mkdir -p "$OUTPATH/$package_name/DEBIAN/"
             dpkg -e "$DEBPATH" "$OUTPATH/$package_name/DEBIAN/"
             dpkg -X "$DEBPATH" "$OUTPATH/$package_name/"
+            break
             ;;
             *)
                 zenity --error --title="不支持的文件格式 Unsupported File Format" --text="文件 $FILE 的格式不支持解压\nFile $FILE format is not supported."
