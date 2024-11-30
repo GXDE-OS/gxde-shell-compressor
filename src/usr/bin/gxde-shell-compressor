@@ -39,7 +39,14 @@ check_tools() {
         exit 1
     fi
 }
-
+function check_exist(){
+for arg in "$@";do
+if [[ ! -e "$arg" ]];then
+garma --error --text="文件或目录不存在\nFile or Directory does not exist."
+exit 1
+fi
+done
+}
 function ask_if_overwrite(){
 if [[ -e "$1" ]];then
     if garma --question --text="$1 已被占用，是否覆盖？\n$1 is occulied. Overwrite?";then
@@ -70,7 +77,7 @@ compress_files() {
     fi
 
     # 选择文件保存路径
-    FILE=$(zenity --file-selection --save --confirm-overwrite --filename=$(basename $1 | cut -d. -f1) --title="选择保存压缩文件的路径 Choose archive file path" --file-filter="$FORMAT files (*.$(echo "$FORMAT" | tr '[:upper:]' '[:lower:]'))|*.$(echo "$FORMAT" | tr '[:upper:]' '[:lower:]')")
+    FILE=$(zenity --file-selection --save --confirm-overwrite --filename="$(dirname $1)/$(remove_suffix $(basename "$1"))" --title="选择保存压缩文件的路径 Choose archive file path" --file-filter="$FORMAT files (*.$(echo "$FORMAT" | tr '[:upper:]' '[:lower:]'))|*.$(echo "$FORMAT" | tr '[:upper:]' '[:lower:]')")
     if [ -z "$FILE" ]; then
         echo "取消压缩操作"
         exit 1
@@ -79,7 +86,7 @@ compress_files() {
     # 提示是否设置密码
     case "$FORMAT" in 
     "7z" | "zip")
-    USE_PASSWORD=$(zenity --question --title="密码保护 Password Protection" --text="是否为压缩文件设置密码？\nDo you want to set a password for the archive?" --ok-label="是 Yes" --cancel-label="否 No" && echo "yes" || echo "no")
+    USE_PASSWORD=$(garma --question  --text="是否为压缩文件设置密码？\nDo you want to set a password for the archive?" --ok-label="是 Yes" --cancel-label="否 No" && echo "yes" || echo "no")
     PASSWORD=""
     if [ "$USE_PASSWORD" = "yes" ]; then
         PASSWORD=$(zenity --password --title="输入压缩密码 Enter Archive Password")
@@ -133,7 +140,7 @@ compress_files() {
             ;;
     esac) | garma --progress --pulsate --auto-close --no-cancel --text="正在执行操作 Processing..."
 
-    garma --info --text="压缩完成！Finished"
+    garma --info --text="压缩完成！Finished" 
 }
 
 # 通用解压逻辑函数
@@ -228,6 +235,7 @@ extract_files() {
         extract_single_file "$FILE" "$TARGET_DIR"
     done)| garma --progress --pulsate --auto-close --no-cancel --text="正在执行操作 Processing..."
     garma --info --text="解压完成！Finished"
+    xdg-open ${EXTRACT_DIR}
 }
 
 # 解压到当前目录
@@ -240,6 +248,9 @@ extract_here() {
         mkdir -p "$TARGET_DIR"
         extract_single_file "$FILE" "$TARGET_DIR"
     done) | garma --progress --pulsate --auto-close --no-cancel --text="正在执行操作 Processing..."
+    if [[ ! -z  ${EXTRACT_DIR} ]];then
+    xdg-open ${EXTRACT_DIR}
+    fi
 }
 
 
@@ -255,8 +266,10 @@ case "$1" in
         echo "取消解压操作"
         exit 1
     fi
+    check_exist "$FILE"
     extract_files "$FILE"
     else
+    check_exist "$@"
     extract_files "$@"
     fi
         ;;
@@ -268,8 +281,10 @@ case "$1" in
         echo "取消压缩操作"
         exit 1
     fi
+        check_exist "${FILE}"
     compress_files "${FILE}"
     else
+        check_exist "$@"
         compress_files "$@"
     fi
         ;;
@@ -282,9 +297,10 @@ case "$1" in
         echo "取消解压操作"
         exit 1
     fi
+        check_exist "$FILE"
     extract_here "$FILE"
     else
-
+    check_exist "$@"
     extract_here "$@"
     fi
         ;;
