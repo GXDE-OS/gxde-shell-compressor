@@ -251,7 +251,21 @@ case "$1" in
         show_help
         ;;
     *)
-        echo "无效参数，使用 --help 查看帮助"
+        declare -a COMPRESSION_TOOLS=("deepin-compressor" "ark" "engrampa" "file-roller")
+        # Function to check if a command exists
+        command_exists() {
+            command -v "$1" &>/dev/null
+        }
+
+            for tool in "${COMPRESSION_TOOLS[@]}"; do
+                if command_exists "$tool"; then
+                    "$tool" "$@"
+                    exit
+                fi
+            done
+        zenity --error --text="未能找到支持的压缩工具，无法启动图形界面。请使用 $0 --help 来查看命令行用法\nNo supported compression tool found! Can not initiate graphic intersurface. Use $0 --help to check cli usage"
         exit 1
+
         ;;
+
 esac
