@@ -1,6 +1,5 @@
-gxde-shell-compressor (1.2.1) UNRELEASED; urgency=low
+gxde-shell-compressor (1.2.2) UNRELEASED; urgency=low
 
-  * Initial release. Closes: #nnnn
-    <nnnn is the bug number of your ITP>
+  * Use garma to select the place to save archive
 
  -- shenmo <>  Sun, 01 Dec 2024 02:31:12 +0800
