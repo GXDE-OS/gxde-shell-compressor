@@ -1,0 +1,6 @@
+gxde-shell-compressor (1.0.0) UNRELEASED; urgency=low
+
+  * Initial release. Closes: #nnnn
+    <nnnn is the bug number of your ITP>
+
+ -- shenmo <>  Sun, 01 Dec 2024 02:31:12 +0800

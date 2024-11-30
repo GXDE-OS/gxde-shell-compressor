@@ -1,0 +1,16 @@
+Source: gxde-shell-compressor
+Section: utils
+Priority: optional
+Maintainer: shenmo <shenmo@spark-app.store>
+Build-Depends: debhelper-compat (= 13)
+Standards-Version: 4.5.1
+Homepage: https://gitee.com/GXDE-OS/gxde-shell-compressor
+Rules-Requires-Root: no
+#Vcs-Git: https://salsa.debian.org/debian/gxde-shell-compressor.git
+#Vcs-Browser: https://salsa.debian.org/debian/gxde-shell-compressor
+
+Package: gxde-shell-compressor
+Architecture: all
+Multi-Arch: foreign
+Depends: ${misc:Depends}, ${shlibs:Depends},garma,7zip | p7zip-full ,zipu,tar,bzip2,pigz,uuid
+Description: gxde-shell-compressor

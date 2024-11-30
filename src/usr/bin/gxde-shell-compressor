@@ -1,0 +1,306 @@
+#!/bin/bash
+
+# 显示帮助信息
+show_help() {
+    echo "Usage: $0 [-f | --extract] | [-d | --compress] | [-h | --extract-here]"
+    echo "  -f, --extract          解压文件并提示进度"
+    echo "  -d, --compress         压缩文件并选择格式"
+    echo "  -h, --extract-here     解压到文件所在目录"
+    echo "  --help                 显示帮助信息"
+}
+
+# 判断是否安装了必要的工具
+check_tools() {
+    if ! command -v zenity &> /dev/null; then
+        echo "Error: zenity is not installed."
+        exit 1
+    fi
+    if ! command -v 7z &> /dev/null; then
+        echo "Error: 7z is not installed."
+        exit 1
+    fi
+}
+
+function create_tar(){
+            tar -cvf "$FILE.tar" --files-from=/dev/null
+            for FILE_TO_ADD in "$@";do
+            pushd "$(dirname ${FILE_TO_ADD})"
+            tar -rvf "$FILE.tar" "./$(basename ${FILE_TO_ADD})"
+            popd
+            done
+}
+
+# 压缩功能
+compress_files() {
+    # 选择压缩格式
+    FORMAT=$(zenity --height=500 --width=500 --list --radiolist --column="Choose" --column="Format" TRUE "7z" FALSE "zip" FALSE "tar" FALSE "tar.xz" FALSE "tar.bz2" FALSE "tar.gz" --title="选择压缩格式 Choose Compress Format")
+    if [ -z "$FORMAT" ]; then
+        echo "取消压缩操作"
+        exit 1
+    fi
+
+    # 选择文件保存路径
+    FILE=$(zenity --file-selection --save --confirm-overwrite --filename=$(basename $1 | cut -d. -f1) --title="选择保存压缩文件的路径 Choose archive file path" --file-filter="$FORMAT files (*.$(echo "$FORMAT" | tr '[:upper:]' '[:lower:]'))|*.$(echo "$FORMAT" | tr '[:upper:]' '[:lower:]')")
+    if [ -z "$FILE" ]; then
+        echo "取消压缩操作"
+        exit 1
+    fi
+
+    # 提示是否设置密码
+    case "$FORMAT" in 
+    "7z" | "zip")
+    USE_PASSWORD=$(zenity --question --title="密码保护 Password Protection" --text="是否为压缩文件设置密码？\nDo you want to set a password for the archive?" --ok-label="是 Yes" --cancel-label="否 No" && echo "yes" || echo "no")
+    PASSWORD=""
+    if [ "$USE_PASSWORD" = "yes" ]; then
+        PASSWORD=$(zenity --password --title="输入压缩密码 Enter Archive Password")
+        if [ -z "$PASSWORD" ]; then
+            zenity --error --text="未设置密码，取消操作。\nNo password set, operation cancelled."
+            exit 1
+        fi
+    fi
+    ;;
+    esac
+    # 根据选择的格式执行压缩操作
+    (case "$FORMAT" in
+        "7z")
+
+            if [ -n "$PASSWORD" ]; then
+                7z a -t7z "$FILE.7z" "$@" -p"$PASSWORD" 
+            else
+                7z a -t7z "$FILE.7z" "$@"
+            fi 
+
+            ;;
+        "zip")
+            if [ -n "$PASSWORD" ]; then
+                7z a -tzip "$FILE.zip" "$@" -p"$PASSWORD" 
+            else
+                7z a -tzip "$FILE.zip" "$@"
+            fi 
+        ;;
+        "tar")
+            create_tar "$@"
+            ;;
+        "tar.xz")
+            create_tar "$@"
+            xz -T0 -v "$FILE.tar"
+            ;;
+        "tar.bz2")
+            create_tar "$@"
+            bzip2 -v "$FILE.tar"
+            ;;
+        "tar.gz")
+            create_tar "$@"
+            pigz "$FILE.tar"
+            ;;
+        *)
+            echo "不支持的格式"
+            exit 1
+            ;;
+    esac)|garma --progress --pulsate --auto-close --no-cancel --text="正在执行操作 Processing..."
+
+    garma --info --text="压缩完成！Finished"
+}
+
+# 解压功能（新增密码提示功能）
+extract_files() {
+    # 选择解压目标位置
+    EXTRACT_DIR=$(zenity --file-selection --directory --title="选择解压到的文件夹 Choose extract to dir" )
+    if [ -z "$EXTRACT_DIR" ]; then
+        echo "取消解压操作"
+        exit 1
+    fi
+
+    (for FILE in "$@"; do
+        # 解压操作
+        while true; do
+            case "$FILE" in
+                *.7z)
+                    # 检测是否需要密码
+                    if ! 7z t "$FILE" -p=$(uuid) ; then
+                        PASSWORD=$(zenity --entry --title="密码保护 Password Required" --text="文件 $FILE 受密码保护，请输入密码\nFile $FILE is password protected. Please enter the password.")
+                        if [ -z "$PASSWORD" ]; then
+                            echo "取消解压操作"
+                            exit 1
+                        fi
+                        yes | 7z x -p"$PASSWORD" "$FILE" -o"$EXTRACT_DIR" && break || \
+                        zenity --error --title="密码错误 Wrong Password" --text="密码错误，请重试\nIncorrect password, please try again."
+                    else
+                        yes | 7z x "$FILE" -o"$EXTRACT_DIR"
+                        break
+                    fi
+                    ;;
+                *.zip)
+                    if zipu "$FILE" 2>&1 | grep -q "Password protected :  True"; then
+                        PASSWORD=$(zenity --entry --title="密码保护 Password Required" --text="文件 $FILE 受密码保护，请输入密码\nFile $FILE is password protected. Please enter the password.")
+                        if [ -z "$PASSWORD" ]; then
+                            echo "取消解压操作"
+                            exit 1
+                        fi
+                        zipu --extract --password "$PASSWORD" "$FILE" "$EXTRACT_DIR" && break || \
+                        zenity --error --title="密码错误 Wrong Password" --text="密码错误，请重试\nIncorrect password, please try again."
+                    else
+                        if zipu "$FILE" 2>&1 | grep -q "All file names are properly in UTF8 encoding"; then
+                        7z x "$FILE" -o"$EXTRACT_DIR"
+                        else
+                        zipu --extract "$FILE"  "$EXTRACT_DIR"
+                        fi
+                        break
+                    fi
+                    ;;
+                *.rar)
+                    if 7z t "$FILE" -p=$(uuid) ; then
+                        PASSWORD=$(zenity --entry --title="密码保护 Password Required" --text="文件 $FILE 受密码保护，请输入密码\nFile $FILE is password protected. Please enter the password.")
+                        if [ -z "$PASSWORD" ]; then
+                            echo "取消解压操作"
+                            exit 1
+                        fi
+                        yes | 7z x -p"$PASSWORD" "$FILE" -o"$EXTRACT_DIR" && break || \
+                        zenity --error --title="密码错误 Wrong Password" --text="密码错误，请重试\nIncorrect password, please try again."
+                    else
+                        yes | 7z x "$FILE" -o"$EXTRACT_DIR"
+                        break
+                    fi
+                    ;;
+                *.tar | *.tar.xz | *.tar.bz2 | *.tar.gz)
+                    tar -xvf "$FILE" -C "$EXTRACT_DIR"
+                    break
+                    ;;
+                *)
+                    zenity --error --title="不支持的文件格式 Unsupported File Format" --text="文件 $FILE 的格式不支持解压\nFile $FILE format is not supported."
+                    exit 1
+                    ;;
+            esac
+        done
+    done)| garma --progress --pulsate --auto-close --no-cancel --text="正在执行操作 Processing..."
+    garma --info --text="解压完成！Finished"
+}
+
+
+# 解压到当前目录
+extract_here() {
+
+    (for FILE in "$@"; do
+        EXTRACT_DIR=$(dirname "$FILE")
+        # 解压操作
+        while true; do
+            case "$FILE" in
+                *.7z)
+                    # 检测是否需要密码
+                    if ! 7z t "$FILE" -p=$(uuid) ; then
+                        PASSWORD=$(zenity --entry --title="密码保护 Password Required" --text="文件 $FILE 受密码保护，请输入密码\nFile $FILE is password protected. Please enter the password.")
+                        if [ -z "$PASSWORD" ]; then
+                            echo "取消解压操作"
+                            exit 1
+                        fi
+                        mkdir -p "$EXTRACT_DIR/$(basename $FILE | cut -d. -f1)"
+                        yes | 7z x -p"$PASSWORD" "$FILE" -o"$EXTRACT_DIR/$(basename $FILE | cut -d. -f1)" && break || \
+                        zenity --error --title="密码错误 Wrong Password" --text="密码错误，请重试\nIncorrect password, please try again."
+                    else
+                        mkdir -p "$EXTRACT_DIR/$(basename $FILE | cut -d. -f1)"
+                        yes | 7z x "$FILE" -o"$EXTRACT_DIR/$(basename $FILE | cut -d. -f1)"
+                        break
+                    fi
+                    ;;
+                *.zip)
+                    if zipu "$FILE" 2>&1 | grep -q "Password protected :  True"; then
+                        PASSWORD=$(zenity --entry --title="密码保护 Password Required" --text="文件 $FILE 受密码保护，请输入密码\nFile $FILE is password protected. Please enter the password.")
+                        if [ -z "$PASSWORD" ]; then
+                            echo "取消解压操作"
+                            exit 1
+                        fi
+                        mkdir -p "$EXTRACT_DIR/$(basename $FILE | cut -d. -f1)"
+                        zipu --extract --password "$PASSWORD" "$FILE" "$EXTRACT_DIR/$(basename $FILE | cut -d. -f1)" && break || \
+                        zenity --error --title="密码错误 Wrong Password" --text="密码错误，请重试\nIncorrect password, please try again."
+                    else
+                        mkdir -p "$EXTRACT_DIR/$(basename $FILE | cut -d. -f1)"
+                        if zipu "$FILE" 2>&1 | grep -q "All file names are properly in UTF8 encoding"; then
+                        7z x "$FILE" -o"$EXTRACT_DIR/$(basename $FILE | cut -d. -f1)"
+                        else
+                        zipu --extract "$FILE"  "$EXTRACT_DIR/$(basename $FILE | cut -d. -f1)"
+                        fi
+                    fi
+                    ;;
+                *.rar)
+                    if 7z t "$FILE" -p=$(uuid) ; then
+                        PASSWORD=$(zenity --entry --title="密码保护 Password Required" --text="文件 $FILE 受密码保护，请输入密码\nFile $FILE is password protected. Please enter the password.")
+                        if [ -z "$PASSWORD" ]; then
+                            echo "取消解压操作"
+                            exit 1
+                        fi
+                        mkdir -p "$EXTRACT_DIR/$(basename $FILE | cut -d. -f1)"
+                        yes | 7z x -p"$PASSWORD" "$FILE" -o"$EXTRACT_DIR/$(basename $FILE | cut -d. -f1)" && break || \
+                        zenity --error --title="密码错误 Wrong Password" --text="密码错误，请重试\nIncorrect password, please try again."
+                    else
+                        mkdir -p "$EXTRACT_DIR/$(basename $FILE | cut -d. -f1)"
+                        yes | 7z x "$FILE" -o"$EXTRACT_DIR/$(basename $FILE | cut -d. -f1)"
+                        break
+                    fi
+                    ;;
+                *.tar | *.tar.xz | *.tar.bz2 | *.tar.gz)
+                    mkdir -p "$EXTRACT_DIR/$(basename $FILE | cut -d. -f1)"
+                    tar -xvf "$FILE" -C "$EXTRACT_DIR/$(basename $FILE | cut -d. -f1)"
+                    break
+                    ;;
+                *)
+                    zenity --error --title="不支持的文件格式 Unsupported File Format" --text="文件 $FILE 的格式不支持解压\nFile $FILE format is not supported."
+                    exit 1
+                    ;;
+            esac
+        done
+    done)|garma --progress --pulsate --auto-close --no-cancel --text="正在执行操作 Processing..."
+}
+
+# 主逻辑
+check_tools
+
+case "$1" in
+    -f|--extract)
+        shift
+    if [[ -z "$@" ]];then
+    FILE=$(zenity --file-selection --title="选择要解压的文件 Choose file to extract" --file-filter="*.7z *.zip *.rar *.tar *.tar.xz *.tar.bz2 *.tar.gz")
+    if [ -z "$FILE" ]; then
+        echo "取消解压操作"
+        exit 1
+    fi
+    extract_files "$FILE"
+    else
+    extract_files "$@"
+    fi
+        ;;
+    -d|--compress)
+        shift 
+        if [[ -z "$@" ]];then
+    FILE=$(zenity --file-selection --directory --title="选择要压缩的目录 Choose dir to compress")
+    if [ -z "$FILE" ]; then
+        echo "取消压缩操作"
+        exit 1
+    fi
+    compress_files "${FILE}"
+    else
+        compress_files "$@"
+    fi
+        ;;
+    -h|--extract-here)
+        shift 
+    # 获取当前文件的路径并解压到所在目录
+    if [[ -z "$@" ]];then
+    FILE=$(zenity --file-selection --title="选择要解压的文件 Choose file to uncompress" --file-filter="*.7z *.zip *.rar *.tar *.tar.xz *.tar.bz2 *.tar.gz")
+    if [ -z "$FILE" ]; then
+        echo "取消解压操作"
+        exit 1
+    fi
+    extract_here "$FILE"
+    else
+
+    extract_here "$@"
+    fi
+        ;;
+    --help)
+        show_help
+        ;;
+    *)
+        echo "无效参数，使用 --help 查看帮助"
+        exit 1
+        ;;
+esac
