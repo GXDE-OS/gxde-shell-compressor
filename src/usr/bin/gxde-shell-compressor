@@ -172,7 +172,11 @@ extract_single_file() {
                     if zipu "$FILE" 2>&1 | grep -q "All file names are properly in UTF8 encoding"; then
                         yes | 7z x -p"$PASSWORD" "$FILE" -o"$EXTRACT_DIR"
                     else
-                        yes | zipu --extract --password="$PASSWORD" "$FILE" "$EXTRACT_DIR" || zenity --warning --text="此文件不使用UTF8编码且自动修复失败，将会使用7z解压，编码可能有问题\nThis file is not using UTF8 coding and we failed to fix it. Will use 7z to extract, while the coding might be incorrect" --timeout=5 && yes | 7z x -p"$PASSWORD" "$FILE" -o"$EXTRACT_DIR"
+                        yes | zipu --extract --password="$PASSWORD" "$FILE" "$EXTRACT_DIR" 
+                     if [[ "$?" != "0" ]];then
+                        zenity --warning --text="此文件不使用UTF8编码且自动修复失败，将会使用7z解压，编码可能有问题\nThis file is not using UTF8 coding and we failed to fix it. Will use 7z to extract, while the coding might be incorrect" --timeout=5 
+                        yes | 7z x -p"$PASSWORD" "$FILE" -o"$EXTRACT_DIR"
+                     fi
                     fi
                     break
                     fi
@@ -181,7 +185,11 @@ extract_single_file() {
                     if zipu "$FILE" 2>&1 | grep -q "All file names are properly in UTF8 encoding"; then
                         yes | 7z x "$FILE" -o"$EXTRACT_DIR"
                     else
-                        yes | zipu --extract "$FILE" "$EXTRACT_DIR" || zenity --warning --text="此文件不使用UTF8编码且自动修复失败，将会使用7z解压，编码可能有问题\nThis file is not using UTF8 coding and we failed to fix it. Will use 7z to extract, while the coding might be incorrect" --timeout=5 && yes | 7z x "$FILE" -o"$EXTRACT_DIR"
+                        yes | zipu --extract "$FILE" "$EXTRACT_DIR" 
+                     if [[ "$?" != "0" ]];then
+                        zenity --warning --text="此文件不使用UTF8编码且自动修复失败，将会使用7z解压，编码可能有问题\nThis file is not using UTF8 coding and we failed to fix it. Will use 7z to extract, while the coding might be incorrect" --timeout=5 
+                        yes | 7z x "$FILE" -o"$EXTRACT_DIR"
+                     fi
                     fi
                     break
                 fi
@@ -247,7 +255,7 @@ extract_here() {
         ask_if_overwrite "$TARGET_DIR"
         mkdir -p "$TARGET_DIR"
         extract_single_file "$FILE" "$TARGET_DIR"
-    done) | garma --progress --pulsate --auto-close --no-cancel --text="正在执行操作 Processing..."
+    done)| garma --progress --pulsate --auto-close --no-cancel --text="正在执行操作 Processing..."
     if [[ ! -z  ${EXTRACT_DIR} ]];then
     xdg-open ${EXTRACT_DIR}
     fi
