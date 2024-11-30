@@ -23,7 +23,7 @@ check_tools() {
 
 function ask_if_overwrite(){
 if [[ -e "$1" ]];then
-    if garma --question --text="$1 已被占用，是否覆盖？\n$1 is occulied. Overwrite?"
+    if garma --question --text="$1 已被占用，是否覆盖？\n$1 is occulied. Overwrite?";then
         continue
     else
     exit 1
