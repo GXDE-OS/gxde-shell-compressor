@@ -8,6 +8,25 @@ show_help() {
     echo "  -h, --extract-here     解压到文件所在目录"
     echo "  --help                 显示帮助信息"
 }
+remove_suffix() {
+    local filename="$1"
+    # 常见压缩后缀名列表
+    local suffixes=(
+        ".tar.gz" ".tar.bz2" ".tar.xz"
+        ".gz" ".bz2" ".xz" ".zip" ".rar" ".7z"
+    )
+    
+    # 检查是否匹配常见压缩后缀
+    for suffix in "${suffixes[@]}"; do
+        if [[ "$filename" == *"$suffix" ]]; then
+            echo "${filename%"$suffix"}"
+            return
+        fi
+    done
+    
+    # 如果没有匹配，去掉最后一个点之后的内容
+    echo "${filename%.*}"
+}
 
 # 判断是否安装了必要的工具
 check_tools() {
@@ -24,9 +43,9 @@ check_tools() {
 function ask_if_overwrite(){
 if [[ -e "$1" ]];then
     if garma --question --text="$1 已被占用，是否覆盖？\n$1 is occulied. Overwrite?";then
-        exit 1
-    else
         true
+    else
+        exit 1
     fi
 fi
 }
@@ -112,7 +131,7 @@ compress_files() {
             echo "不支持的格式"
             exit 1
             ;;
-    esac)|garma --progress --pulsate --auto-close --no-cancel --text="正在执行操作 Processing..."
+    esac) | garma --progress --pulsate --auto-close --no-cancel --text="正在执行操作 Processing..."
 
     garma --info --text="压缩完成！Finished"
 }
@@ -202,11 +221,12 @@ extract_files() {
     [ -z "$EXTRACT_DIR" ] && echo "取消解压操作" && exit 1
 
     (for FILE in "$@"; do
-        local TARGET_DIR="$EXTRACT_DIR/$(basename "$FILE" | cut -d. -f1)"
+        local TARGET_DIR="$EXTRACT_DIR/$(remove_suffix $(basename "$FILE"))"
+        echo "$FILE $(basename "$FILE") $(remove_suffix $(basename "$FILE"))"
         ask_if_overwrite "$TARGET_DIR"
         mkdir -p "$TARGET_DIR"
         extract_single_file "$FILE" "$TARGET_DIR"
-    done)
+    done)| garma --progress --pulsate --auto-close --no-cancel --text="正在执行操作 Processing..."
     garma --info --text="解压完成！Finished"
 }
 
@@ -215,7 +235,7 @@ extract_here() {
     (for FILE in "$@"; do
         local EXTRACT_DIR
         EXTRACT_DIR=$(dirname "$FILE")
-        local TARGET_DIR="$EXTRACT_DIR/$(basename "$FILE" | cut -d. -f1)"
+        local TARGET_DIR="$EXTRACT_DIR/$(remove_suffix $(basename "$FILE"))"
         ask_if_overwrite "$TARGET_DIR"
         mkdir -p "$TARGET_DIR"
         extract_single_file "$FILE" "$TARGET_DIR"
