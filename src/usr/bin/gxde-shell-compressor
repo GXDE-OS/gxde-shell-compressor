@@ -77,6 +77,7 @@ if [[ -e "$1" ]];then
     if garma --question --text="$1 已被占用，是否覆盖？\n$1 is occulied. Overwrite?";then
         true
     else
+        echo "100" # Garma bug can't auto-close
         exit 1
     fi
 fi
