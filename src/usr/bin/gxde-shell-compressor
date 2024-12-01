@@ -243,24 +243,28 @@ extract_files() {
         mkdir -p "$TARGET_DIR"
         extract_single_file "$FILE" "$TARGET_DIR"
     done)| garma --progress --pulsate --auto-close --no-cancel --text="正在执行操作 Processing..."
-        if [[ -e  ${TARGET_DIR} ]];then
-            xdg-open ${TARGET_DIR}
+        if [[ -e  "${EXTRACT_DIR}" ]];then
+            xdg-open "${EXTRACT_DIR}"
         fi
 }
 
 # 解压到当前目录
 extract_here() {
-    (for FILE in "$@"; do
+        (for FILE in "$@"; do
         local EXTRACT_DIR
         EXTRACT_DIR=$(dirname "$FILE")
         local TARGET_DIR="$EXTRACT_DIR/$(remove_suffix $(basename "$FILE"))"
         ask_if_overwrite "$TARGET_DIR"
         mkdir -p "$TARGET_DIR"
         extract_single_file "$FILE" "$TARGET_DIR"
-        if [[ -e  ${TARGET_DIR} ]];then
+        if [[ "$#" -lt "2" ]];then
             xdg-open ${TARGET_DIR}
         fi
     done)| garma --progress --pulsate --auto-close --no-cancel --text="正在执行操作 Processing..."
+        if [[ "$#"  -gt "1" ]];then
+        garma --info --text="解压完成！Finished" 
+        fi
+        
 }
 
 
