@@ -58,11 +58,11 @@ fi
 }
 
 function create_tar(){
-            ask_if_overwrite "$FILE.tar"
-            tar -cvf "$FILE.tar" --files-from=/dev/null
+            ask_if_overwrite "$FILE_NO_SUFFIX.tar"
+            tar -cvf "$FILE_NO_SUFFIX.tar" --files-from=/dev/null
             for FILE_TO_ADD in "$@";do
             pushd "$(dirname ${FILE_TO_ADD})"
-            tar -rvf "$FILE.tar" "./$(basename ${FILE_TO_ADD})"
+            tar -rvf "$FILE_NO_SUFFIX.tar" "./$(basename ${FILE_TO_ADD})"
             popd
             done
 }
@@ -77,12 +77,12 @@ compress_files() {
     fi
 
     # 选择文件保存路径
-    FILE=$(garma --file-selection --save  --filename="$(dirname $1)/$(remove_suffix $(basename "$1"))" --title="选择保存压缩文件的路径 Choose archive file path" --file-filter="$FORMAT files (*.$(echo "$FORMAT" | tr '[:upper:]' '[:lower:]'))|*.$(echo "$FORMAT" | tr '[:upper:]' '[:lower:]')")
+    FILE=$(zenity --file-selection --save  --filename="$(dirname $1)/$(remove_suffix $(basename "$1")).${FORMAT}" --title="选择保存压缩文件的路径 Choose archive file path" --file-filter="$FORMAT files (*.$(echo "$FORMAT" | tr '[:upper:]' '[:lower:]'))|*.$(echo "$FORMAT" | tr '[:upper:]' '[:lower:]')")
     if [ -z "$FILE" ]; then
         echo "取消压缩操作"
         exit 1
     fi
-
+    
     # 提示是否设置密码
     case "$FORMAT" in 
     "7z" | "zip")
@@ -98,25 +98,26 @@ compress_files() {
     ;;
     esac
     # 根据选择的格式执行压缩操作
+    FILE_NO_SUFFIX="$(remove_suffix ${FILE})"
     (case "$FORMAT" in
         "7z")
 
             if [ -n "$PASSWORD" ]; then
-                ask_if_overwrite "$FILE.7z"
-                7z a -t7z "$FILE.7z" "$@" -p"$PASSWORD" 
+                ask_if_overwrite "$FILE"
+                7z a -t7z "$FILE" "$@" -p"$PASSWORD" 
             else
-                ask_if_overwrite "$FILE.7z"
-                7z a -t7z "$FILE.7z" "$@"
+                ask_if_overwrite "$FILE"
+                7z a -t7z "$FILE" "$@"
             fi 
 
             ;;
         "zip")
             if [ -n "$PASSWORD" ]; then
-                ask_if_overwrite "$FILE.zip"
-                7z a -tzip "$FILE.zip" "$@" -p"$PASSWORD" 
+                ask_if_overwrite "$FILE"
+                7z a -tzip "$FILE" "$@" -p"$PASSWORD" 
             else
-                ask_if_overwrite "$FILE.zip"
-                7z a -tzip "$FILE.zip" "$@"
+                ask_if_overwrite "$FILE"
+                7z a -tzip "$FILE" "$@"
             fi 
         ;;
         "tar")
@@ -124,15 +125,15 @@ compress_files() {
             ;;
         "tar.xz")
             create_tar "$@"
-            xz -T0 -v "$FILE.tar"
+            xz -T0 -v "$FILE_NO_SUFFIX.tar"
             ;;
         "tar.bz2")
             create_tar "$@"
-            bzip2 -v "$FILE.tar"
+            bzip2 -v "$FILE_NO_SUFFIX.tar"
             ;;
         "tar.gz")
             create_tar "$@"
-            pigz "$FILE.tar"
+            pigz "$FILE_NO_SUFFIX.tar"
             ;;
         *)
             echo "不支持的格式"

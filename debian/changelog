@@ -1,5 +1,6 @@
-gxde-shell-compressor (1.2.2) UNRELEASED; urgency=low
+gxde-shell-compressor (1.2.3) UNRELEASED; urgency=low
 
   * Use garma to select the place to save archive
+  * Enhance Experience of Saving archive
 
  -- shenmo <>  Sun, 01 Dec 2024 02:31:12 +0800
