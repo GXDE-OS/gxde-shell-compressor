@@ -12,6 +12,6 @@ Rules-Requires-Root: no
 Package: gxde-shell-compressor
 Architecture: all
 Multi-Arch: foreign
-Depends: ${misc:Depends}, ${shlibs:Depends},garma,7zip | p7zip-full ,zipu,tar,bzip2,pigz,uuid,zenity,garma
+Depends: ${misc:Depends}, ${shlibs:Depends},garma (>=1.2.1-2),7zip | p7zip-full ,zipu,tar,bzip2,pigz,uuid,zenity
 Recommends: deepin-compressor
 Description: gxde-shell-compressor

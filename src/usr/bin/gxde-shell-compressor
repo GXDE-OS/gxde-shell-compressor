@@ -65,7 +65,7 @@ function check_exist(){
 for arg in "$@";do
 if [[ ! -e "$arg" ]];then
 garma --error --text="文件或目录不存在\nFile or Directory does not exist."
-echo 100
+
 exit 1
 fi
 done
@@ -75,7 +75,7 @@ if [[ -e "$1" ]];then
     if garma --question --text="$1 已被占用，是否覆盖？\n$1 is occulied. Overwrite?";then
         true
     else
-        echo 100
+        
         exit 1
     fi
 fi
@@ -96,36 +96,35 @@ function create_tar(){
 
 # 压缩功能
 compress_files() {
-    # 选择压缩格式
-    FORMAT=$(zenity --height=500 --width=500 --list --radiolist --column="Choose" --column="Format" TRUE "7z" FALSE "zip" FALSE "tar" FALSE "tar.xz" FALSE "tar.bz2" FALSE "tar.gz" --title="选择压缩格式 Choose Compress Format")
-    if [ -z "$FORMAT" ]; then
-        echo "取消压缩操作"
-        echo 100
-        exit 1
-    fi
+# 合并选择压缩格式与是否设置密码的选项
+FORMAT=$(zenity --height=500 --width=500 --list --radiolist --column="Choose" --column="Format" TRUE "zip"  FALSE "7z"  FALSE "tar" FALSE "tar.xz" FALSE "tar.bz2" FALSE "tar.gz" FALSE "7z (加密Encrypt)" FALSE "zip (加密Encrypt)" --title="选择压缩格式 Choose Compress Format")
+if [ -z "$FORMAT" ]; then
+    echo "取消压缩操作"
+    exit 1
+fi
 
-    # 选择文件保存路径
-    FILE=$(zenity --file-selection --save  --filename="$(dirname $1)/$(remove_suffix $(basename "$1")).${FORMAT}" --title="选择保存压缩文件的路径 Choose archive file path" --file-filter="$FORMAT files (*.$(echo "$FORMAT" | tr '[:upper:]' '[:lower:]'))|*.$(echo "$FORMAT" | tr '[:upper:]' '[:lower:]')")
-    if [ -z "$FILE" ]; then
-        echo "取消压缩操作"
-        echo 100
+# 判断用户是否选择加密选项
+ENCRYPT=false
+if [[ "$FORMAT" == "7z (加密Encrypt)" || "$FORMAT" == "zip (加密Encrypt)" ]]; then
+    ENCRYPT=true
+    FORMAT="${FORMAT%% (加密Encrypt)}"  # 移除加密选项文字，只保留格式
+fi
+
+# 选择文件保存路径
+FILE=$(zenity --file-selection --save --filename="$(dirname "$1")/$(remove_suffix $(basename "$1")).${FORMAT}" --title="选择保存压缩文件的路径 Choose archive file path" --file-filter="$FORMAT files (*.$(echo "$FORMAT" | tr '[:upper:]' '[:lower:]'))|*.$(echo "$FORMAT" | tr '[:upper:]' '[:lower:]')")
+if [ -z "$FILE" ]; then
+    echo "取消压缩操作"
+    exit 1
+fi
+
+# 如果选择加密，提示用户输入密码
+if [ "$ENCRYPT" = true ]; then
+    PASSWORD=$(zenity --password --title="输入压缩密码 Enter Archive Password")
+    if [ -z "$PASSWORD" ]; then
+        zenity --error --text="未设置密码，取消操作。\nNo password set, operation cancelled."
         exit 1
     fi
-    
-    # 提示是否设置密码
-    case "$FORMAT" in 
-    "7z" | "zip")
-    USE_PASSWORD=$(garma --question  --text="是否为压缩文件设置密码？\nDo you want to set a password for the archive?" --ok-label="是 Yes" --cancel-label="否 No" && echo "yes" || echo "no")
-    PASSWORD=""
-    if [ "$USE_PASSWORD" = "yes" ]; then
-        PASSWORD=$(zenity --password --title="输入压缩密码 Enter Archive Password")
-        if [ -z "$PASSWORD" ]; then
-            zenity --error --text="未设置密码，取消操作。\nNo password set, operation cancelled."
-            exit 1
-        fi
-    fi
-    ;;
-    esac
+fi
     # 根据选择的格式执行压缩操作
     FILE_NO_SUFFIX="$(remove_suffix ${FILE})"
     (case "$FORMAT" in
@@ -179,11 +178,11 @@ compress_files() {
             ;;
         *)
             echo "不支持的格式"
-            echo 100
+            
             exit 1
             ;;
     esac
-    echo 100) | garma --progress  --auto-close --no-cancel --text="正在执行操作 Processing..."
+    ) | garma --progress  --auto-close --auto-kill --text="正在执行操作 Processing..."
 
     garma --info --text="压缩完成！Finished" 
 }
@@ -285,7 +284,7 @@ extract_single_file() {
             ;;
             *)
                 zenity --error --title="不支持的文件格式 Unsupported File Format" --text="文件 $FILE 的格式不支持解压\nFile $FILE format is not supported."
-                echo 100
+                
                 exit 1
                 ;;
         esac
@@ -296,7 +295,7 @@ extract_single_file() {
 extract_files() {
     local EXTRACT_DIR
     EXTRACT_DIR=$(zenity --file-selection --directory --title="选择解压到的文件夹 Choose extract to dir")
-    [ -z "$EXTRACT_DIR" ] && echo "取消解压操作" && echo 100 && exit 1
+    [ -z "$EXTRACT_DIR" ] && echo "取消解压操作"  && exit 1
 
     (for FILE in "$@"; do
         local TARGET_DIR="$EXTRACT_DIR/$(remove_suffix $(basename "$FILE"))"
@@ -305,7 +304,7 @@ extract_files() {
         mkdir -p "$TARGET_DIR"
         extract_single_file "$FILE" "$TARGET_DIR"
     done
-    echo 100)| garma --progress  --auto-close --no-cancel --text="正在执行操作 Processing..."
+    )| garma --progress  --auto-close --auto-kill --text="正在执行操作 Processing..."
         if [[ -e  "${EXTRACT_DIR}" ]];then
             xdg-open "${EXTRACT_DIR}"
         fi
@@ -324,7 +323,7 @@ extract_here() {
             xdg-open ${TARGET_DIR}
         fi
     done
-    echo 100)| garma --progress  --auto-close --no-cancel --text="正在执行操作 Processing..."
+    )| garma --progress  --auto-close --auto-kill --text="正在执行操作 Processing..."
         if [[ "$#"  -gt "1" ]];then
         garma --info --text="解压完成！Finished" 
         fi
@@ -342,7 +341,7 @@ case "$1" in
     FILE=$(zenity --file-selection --title="选择要解压的文件 Choose file to extract" --file-filter="*.7z *.zip *.rar *.tar *.tar.xz *.tar.bz2 *.tar.gz")
     if [ -z "$FILE" ]; then
         echo "取消解压操作"
-        echo 100
+        
         exit 1
     fi
     check_exist "$FILE"
@@ -358,7 +357,7 @@ case "$1" in
     FILE=$(zenity --file-selection --directory --title="选择要压缩的目录 Choose dir to compress")
     if [ -z "$FILE" ]; then
         echo "取消压缩操作"
-        echo 100
+        
         exit 1
     fi
         check_exist "${FILE}"
@@ -375,7 +374,7 @@ case "$1" in
     FILE=$(zenity --file-selection --title="选择要解压的文件 Choose file to uncompress" --file-filter="*.7z *.zip *.rar *.tar *.tar.xz *.tar.bz2 *.tar.gz")
     if [ -z "$FILE" ]; then
         echo "取消解压操作"
-        echo 100
+        
         exit 1
     fi
         check_exist "$FILE"
