@@ -1,4 +1,4 @@
-gxde-shell-compressor (1.4.0) UNRELEASED; urgency=low
+gxde-shell-compressor (1.4.1) UNRELEASED; urgency=low
 
   * Use garma to select the place to save archive
   * Enhance Experience of Saving archive
@@ -7,5 +7,6 @@ gxde-shell-compressor (1.4.0) UNRELEASED; urgency=low
   * Fix: 多个同时解压的时候只有第一个成功，现在ascii编码也使用7z解压
   * Feat: support cancel process
   * feat: 若无法识别则fallback到tar
+  * 修复在 Debian 12 无法自动配置 7z binary 的问题
 
  -- shenmo <>  Sun, 01 Dec 2024 02:31:12 +0800
