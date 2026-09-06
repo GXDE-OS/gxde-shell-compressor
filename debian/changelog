@@ -1,5 +1,6 @@
-gxde-shell-compressor (1.4.1) UNRELEASED; urgency=low
+gxde-shell-compressor (1.4.2) UNRELEASED; urgency=medium
 
+  [ shenmo ]
   * Use garma to select the place to save archive
   * Enhance Experience of Saving archive
   * Support Progress
@@ -9,4 +10,7 @@ gxde-shell-compressor (1.4.1) UNRELEASED; urgency=low
   * feat: 若无法识别则fallback到tar
   * 修复在 Debian 12 无法自动配置 7z binary 的问题
 
- -- shenmo <jifengshenmo@outlook.com>  Sun, 01 Dec 2024 02:31:12 +0800
+  [ CharOfString ]
+  * Repair Debian package metadata for current build tools.
+
+ -- CharOfString <root@charofstring.cc>  Sun, 06 Sep 2026 17:18:42 -0500
