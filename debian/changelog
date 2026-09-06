@@ -9,4 +9,4 @@ gxde-shell-compressor (1.4.1) UNRELEASED; urgency=low
   * feat: 若无法识别则fallback到tar
   * 修复在 Debian 12 无法自动配置 7z binary 的问题
 
- -- shenmo <>  Sun, 01 Dec 2024 02:31:12 +0800
+ -- shenmo <jifengshenmo@outlook.com>  Sun, 01 Dec 2024 02:31:12 +0800
