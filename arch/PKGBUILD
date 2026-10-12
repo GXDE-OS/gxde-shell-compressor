@@ -1,0 +1,39 @@
+# Maintainer: CharOfString <root@charofstring.cc>
+pkgname=gxde-shell-compressor-git
+pkgver=1.4.2
+pkgrel=1
+pkgdesc='Archive helper for GXDE (7z/zip/tar front end with dialogs)'
+arch=('any')
+url="https://github.com/GXDE-OS/gxde-shell-compressor"
+license=('CC-BY-NC-SA-4.0')
+# uuid 命令（Debian 的 uuid 包）在 Arch 官方源中没有，见 package() 中的兼容命令
+# The uuid command (Debian's uuid package) is not in the Arch repos, see the
+# compat command in package().
+depends=('garma-git' '7zip' 'zipu-git' 'tar' 'bzip2' 'pigz' 'util-linux' 'zenity' 'bash')
+makedepends=('git')
+provides=('gxde-shell-compressor' 'uuid')
+conflicts=('gxde-shell-compressor' 'uuid')
+source=()
+sha512sums=()
+
+# 直接使用 PKGBUILD 所在的 git 仓库作为源码 ・ Build from the git checkout this PKGBUILD lives in.
+_srcroot() {
+  git -C "$startdir" rev-parse --show-toplevel
+}
+
+package() {
+  # 与 debian/install 相同，src/ 即为安装根目录 ・ Same as debian/install, src/ is the install root.
+  cp -r --no-preserve=ownership "$(_srcroot)/src/." "$pkgdir/"
+
+  # 脚本用 $(uuid) 生成随机密码来检测加密压缩包；没有 uuid 时 7z 会交互式询问密码。
+  # 提供一个基于 util-linux uuidgen 的 uuid 命令
+  # The script uses $(uuid) as a random password to detect encrypted archives;
+  # without uuid 7z prompts for a password interactively.  Provide a uuid
+  # command based on util-linux's uuidgen.
+  install -d "$pkgdir/usr/bin"
+  printf '#!/bin/sh\nexec uuidgen "$@"\n' > "$pkgdir/usr/bin/uuid"
+  chmod 755 "$pkgdir/usr/bin/uuid"
+
+  # CC-BY-NC-SA-4.0 不是通用许可证，需随包附带 ・ CC-BY-NC-SA-4.0 is not a common license, ship its text.
+  install -Dm644 "$(_srcroot)/LICENSE" "$pkgdir/usr/share/licenses/$pkgname/LICENSE"
+}
