@@ -1,5 +1,5 @@
 # Maintainer: CharOfString <root@charofstring.cc>
-pkgname=gxde-shell-compressor-git
+pkgname=gxde-shell-compressor
 pkgver=1.4.2
 pkgrel=1
 pkgdesc='Archive helper for GXDE (7z/zip/tar front end with dialogs)'
@@ -9,10 +9,11 @@ license=('CC-BY-NC-SA-4.0')
 # uuid 命令（Debian 的 uuid 包）在 Arch 官方源中没有，见 package() 中的兼容命令
 # The uuid command (Debian's uuid package) is not in the Arch repos, see the
 # compat command in package().
-depends=('garma-git' '7zip' 'zipu-git' 'tar' 'bzip2' 'pigz' 'util-linux' 'zenity' 'bash')
+depends=('garma' '7zip' 'zipu' 'tar' 'bzip2' 'pigz' 'util-linux' 'zenity' 'bash')
 makedepends=('git')
-provides=('gxde-shell-compressor' 'uuid')
-conflicts=('gxde-shell-compressor' 'uuid')
+provides=('uuid' "gxde-shell-compressor-git=$pkgver")
+conflicts=('uuid' 'gxde-shell-compressor-git')
+replaces=('gxde-shell-compressor-git')
 source=()
 sha512sums=()
 
